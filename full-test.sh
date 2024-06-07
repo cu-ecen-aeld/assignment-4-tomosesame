@@ -1,46 +1,25 @@
 #!/bin/bash
-# This script can be copied into your base directory for use with
-# automated testing using assignment-autotest.  It automates the
-# steps described in https://github.com/cu-ecen-5013/assignment-autotest/blob/master/README.md#running-tests
+# Tester script for assignment 4
+
 set -e
+set -u
 
-cd `dirname $0`
-test_dir=`pwd`
-echo "starting test with SKIP_BUILD=\"${SKIP_BUILD}\" and DO_VALIDATE=\"${DO_VALIDATE}\""
+OUTPUT_FILE=/tmp/assignment4-result.txt
 
-# This part of the script always runs as the current user, even when
-# executed inside a docker container.
-# See the logic in parse_docker_options for implementation
-logfile=test.sh.log
-# See https://stackoverflow.com/a/3403786
-# Place stdout and stderr in a log file
-exec > >(tee -i -a "$logfile") 2> >(tee -i -a "$logfile" >&2)
-
-echo "Running test with user $(whoami)"
-
-set +e
-
-# If there's a configuration for the assignment number, use this to look for
-# additional tests
-if [ -f conf/assignment.txt ]; then
-    # This is just one example of how you could find an associated assignment
-    assignment=`cat conf/assignment.txt`
-    if [ -f ./assignment-autotest/test/${assignment}/assignment-test.sh ]; then
-        echo "Executing assignment test script"
-        ./assignment-autotest/test/${assignment}/assignment-test.sh $test_dir
-        rc=$?
-        if [ $rc -eq 0 ]; then
-            echo "Test of assignment ${assignment} complete with success"
-        else
-            echo "Test of assignment ${assignment} failed with rc=${rc}"
-            exit $rc
-        fi
-    else
-        echo "No assignment-test script found for ${assignment}"
-        exit 1
-    fi
-else
-    echo "Missing conf/assignment.txt, no assignment to run"
-    exit 1
+# Check if the output file exists, and remove it if it does
+if [ -e "$OUTPUT_FILE" ]; then
+    rm -f "$OUTPUT_FILE"
 fi
-exit ${unit_test_rc}
+
+# Run the finder script and capture the output
+/usr/bin/finder.sh /tmp/aeld-data AELD_IS_FUN > "$OUTPUT_FILE"
+
+# Verify that the output is as expected
+EXPECTED_OUTPUT="The number of files are 10 and the number of matching lines are 10"
+ACTUAL_OUTPUT=$(cat "$OUTPUT_FILE")
+
+if [ "$ACTUAL_OUTPUT" == "$EXPECTED_OUTPUT" ]; then
+    echo "success"
+else
+    echo "error"
+fi
